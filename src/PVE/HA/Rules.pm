@@ -205,8 +205,6 @@ sub decode_value {
         }
 
         return $res;
-    } elsif ($key eq 'comment') {
-        return PVE::Tools::decode_text($value);
     }
 
     my $plugin = $class->lookup($type);
@@ -240,8 +238,6 @@ sub encode_value {
         PVE::HA::Tools::pve_verify_ha_resource_id($_) for keys %$value;
 
         return join(',', sort keys %$value);
-    } elsif ($key eq 'comment') {
-        return PVE::Tools::encode_text($value);
     }
 
     my $plugin = $class->lookup($type);
@@ -260,6 +256,30 @@ sub parse_section_header {
         return ($type, $ruleid, $errmsg, $config);
     }
     return undef;
+}
+
+sub parse_config {
+    my ($class, $filename, $raw, $allow_unknown) = @_;
+
+    my $cfg = $class->SUPER::parse_config($filename, $raw, $allow_unknown);
+
+    for my $rule (values $cfg->{ids}->%*) {
+        $rule->{comment} = PVE::Tools::decode_text($rule->{comment})
+            if defined($rule->{comment});
+    }
+
+    return $cfg;
+}
+
+sub write_config {
+    my ($class, $filename, $cfg, $allow_unknown) = @_;
+
+    for my $rule (values $cfg->{ids}->%*) {
+        $rule->{comment} = PVE::Tools::encode_text($rule->{comment})
+            if defined($rule->{comment});
+    }
+
+    return $class->SUPER::write_config($filename, $cfg, $allow_unknown);
 }
 
 # General rule helpers
