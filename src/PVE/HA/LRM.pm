@@ -982,7 +982,14 @@ sub exec_resource_agent {
 
     if ($cmd eq 'started') {
 
-        return SUCCESS if $running;
+        return SUCCESS if $running == 1; # running normally
+
+        # stop the panicked service before restarting it
+        if ($running == -1) {
+            $haenv->log("info", "stopping panicked service $sid");
+
+            $plugin->shutdown($haenv, $id, 0);
+        }
 
         $haenv->log("info", "starting service $sid");
 
