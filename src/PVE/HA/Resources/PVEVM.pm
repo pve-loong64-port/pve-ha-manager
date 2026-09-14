@@ -143,10 +143,13 @@ sub check_running {
     my $nodename = $haenv->nodename();
 
     if (PVE::QemuServer::check_running($vmid, 1, $nodename)) {
+        # return -1 to indicate the panicked status while keeping it truthy
+        my $qmpstatus = eval { PVE::QemuServer::Monitor::mon_cmd($vmid, 'query-status') };
+        return -1 if defined($qmpstatus) && $qmpstatus->{status} eq 'guest-panicked';
+
         # do not count VMs which are suspended for a backup job as running
         my $conf = PVE::QemuConfig->load_config($vmid, $nodename);
         if (defined($conf->{lock}) && $conf->{lock} eq 'backup') {
-            my $qmpstatus = eval { PVE::QemuServer::Monitor::mon_cmd($vmid, 'query-status') };
             $haenv->log('warning', "$@") if $@;
 
             return 0 if defined($qmpstatus) && $qmpstatus->{status} eq 'prelaunch';
